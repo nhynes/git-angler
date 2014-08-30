@@ -1,8 +1,11 @@
 var gitHttpBackend = require('git-http-backend'),
+    util = require('util'),
+    stream = require('stream'),
     spawn = require('child_process').spawn,
     path = require('path'),
     config = require('./config'),
-    GIT_HTTP_PATH = '/info/refs'.split('/').slice( 1 );
+    GIT_HTTP_PATH = '/info/refs'.split('/').slice( 1 ),
+    HAVE_RE = /[0-9A-Fa-f]{4}have [0-9A-Fa-f]+/;
 
 /**
  * Gets the repo path from a path containing internal Git subdirectories
@@ -54,13 +57,40 @@ function getRepoPath( path ) {
     return path;
 }
 
+util.inherits( ServiceActionChecker, stream.Transform );
+/**
+ * Checks a Git pack input stream to determine the most likely action type
+ * @param Object options serviceAction is the initial guess, other options are passed to Transform
+ * When finished streaming, check this.serviceAction for the gathered service action
+ */
+function ServiceActionChecker( options ) {
+    if ( !( this instanceof ServiceActionChecker ) )
+        return new ServiceActionChecker( options );
+
+    this.serviceAction = ( options.serviceAction === 'pull' ? 'clone' : options.serviceAction );
+    delete options.serviceAction;
+
+    stream.Transform.call( this, options );
+}
+
+ServiceActionChecker.prototype._transform = function( chunk, enc, done ) {
+    if ( HAVE_RE.test( chunk.toString() ) && this.serviceAction === 'clone' ) {
+        this.serviceAction = 'pull';
+    }
+    this.push( chunk );
+    done();
+}
+
 module.exports = function( req, res, urlComponents, rpub ) {
     var repoPath = getRepoPath( urlComponents.path ),
         repoFullPath = path.resolve
             .bind( null, config.pathToRepos )
-            .apply( null, repoPath )
+            .apply( null, repoPath ),
+        actionNotifier = new stream.PassThrough(),
+        serviceActionChecker,
+        packStream;
 
-    req.pipe( gitHttpBackend( req.url, function( err, service ) {
+    packStream = req.pipe( gitHttpBackend( req.url, function( err, service ) {
         var ps;
 
         if ( err ) {
@@ -70,10 +100,14 @@ module.exports = function( req, res, urlComponents, rpub ) {
         }
 
         res.setHeader( 'Content-Type', service.type );
-        console.log( service.action, service.args, service.fields, service.type );
+
+        serviceActionChecker = new ServiceActionChecker({ serviceAction: service.action });
 
         ps = spawn( service.cmd, service.args.concat( repoFullPath ) );
-        ps.stdout.pipe( service.createStream() ).pipe( ps.stdin );
-    }) ).pipe( res );
+        ps.stdout.pipe( service.createStream() ).pipe( serviceActionChecker ).pipe( ps.stdin );
+    }) ).pipe( actionNotifier ).pipe( res );
 
+    actionNotifier.on( 'end', function() {
+        var action = serviceActionChecker.serviceAction;
+    });
 };
