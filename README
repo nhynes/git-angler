@@ -1,0 +1,33 @@
+# Git Event Bus
+
+This event bus sits between the client of the repository and the repository itself and listens to the
+conversation happening between the two. Additionally, the bus is configured to receive notifications
+generated in the client's githook scripts.
+
+            git-http             git-http
+    Client <--------> Event Bus <--------> Requested repository
+      |__________________^ ^_________________________|
+         githook events           githook events
+
+Thus, there are two components: the git-http-backend listener and the vanilla http REST listener.
+
+## git-http-backend listener
+
+Used to capture the following events:
+    * pull
+    * info
+    * clone
+
+## http listener
+
+Events sent from local (client) repo:
+    * post-merge
+    * pre-rebase
+    * (pre|post)-commit
+    * post-checkout
+        + will emit a clone event if an appropriate checkout is detected
+    * post-rewrite -- not implemented yet
+    * (pre|post)-patch -- not implemented
+
+Events sent from the remote repo:
+    * (pre|post)-push -- corresponds to (pre|post)-receive
