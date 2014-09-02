@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Captures git events and casts them out as hooks",
   "main": "index.js",
-  "license": "GNU Affero General Public License v3.0",
+  "license": "AGPL-3.0",
   "repository": {
       "type": "git",
       "url": "https://github.com/nhynes/git-angler.git"
@@ -12,7 +12,6 @@
     "test": "gulp test"
   },
   "author": "Nick Hynes",
-  "license": "MIT",
   "dependencies": {
     "compression": "^1.0.11",
     "connect": "^3.1.1",
