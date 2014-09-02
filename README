@@ -1,33 +1,31 @@
-# Git Event Bus
+# Git Angler - A Git event bus
 
-This event bus sits between the client of the repository and the repository itself and listens to the
-conversation happening between the two. Additionally, the bus is configured to receive notifications
-generated in the client's githook scripts.
+This event bus acts as a hub for Git events by listening to git-http traffic and processing events sent by in-repo githooks. The event bus is, therefore, used to serve the git repos via http(s).
 
             git-http             git-http
     Client <--------> Event Bus <--------> Requested repository
       |__________________^ ^_________________________|
          githook events           githook events
 
-Thus, there are two components: the git-http-backend listener and the vanilla http REST listener.
+As previously mentioned, there are two components: the git-http listener and the REST hook listener.
 
-## git-http-backend listener
+## git-http listener
 
 Used to capture the following events:
-    * pull
-    * info
-    * clone
+    * (pre-)pull
+    * (pre-)info
+    * (pre-)clone
+    * (pre-)push // not entirely sure why this is useful over (pre-)receive
 
-## http listener
+## REST hook listener
 
 Events sent from local (client) repo:
     * post-merge
     * pre-rebase
     * (pre|post)-commit
     * post-checkout
-        + will emit a clone event if an appropriate checkout is detected
-    * post-rewrite -- not implemented yet
-    * (pre|post)-patch -- not implemented
+    * post-rewrite -- not a high priority for implementation, but very possible
+    * (pre|post)-patch -- same as above
 
 Events sent from the remote repo:
-    * (pre|post)-push -- corresponds to (pre|post)-receive
+    * (pre-)push -- corresponds to (pre|post)-receive

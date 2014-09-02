@@ -1,0 +1,26 @@
+{
+  "name": "git-angler",
+  "version": "1.0.0",
+  "description": "Captures git events and casts them out as hooks",
+  "main": "lib/main.js",
+  "scripts": {
+    "test": "gulp test"
+  },
+  "author": "Nick Hynes",
+  "license": "MIT",
+  "dependencies": {
+    "dnode": "^1.2.0",
+    "git-http-backend": "nhynes/git-http-backend",
+    "shoe": "0.0.15",
+    "stream-to-buffer": "^0.1.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.8.7",
+    "gulp-jscs": "^1.1.0",
+    "gulp-jshint": "^1.8.4",
+    "gulp-nodeunit": "0.0.5",
+    "gulp-plumber": "^0.6.5",
+    "jshint-stylish": "^0.4.0",
+    "nodeunit": "^0.9.0"
+  }
+}
