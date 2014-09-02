@@ -1,11 +1,16 @@
+// TODO: make this component into a stream
+
+'use strict';
+
 var gitHttpBackend = require('git-http-backend'),
     util = require('util'),
+    fs = require('fs'),
     stream = require('stream'),
+    streamToBuffer = require('stream-to-buffer'),
     spawn = require('child_process').spawn,
     path = require('path'),
     config = require('./config'),
-    GIT_HTTP_PATH = '/info/refs'.split('/').slice( 1 ),
-    HAVE_RE = /[0-9A-Fa-f]{4}have [0-9A-Fa-f]+/;
+    handlerTimeoutLen = config.handlerTimeout || 30000;
 
 /**
  * Gets the repo path from a path containing internal Git subdirectories
@@ -13,7 +18,7 @@ var gitHttpBackend = require('git-http-backend'),
  * @param {Array} path an array containing the repository path
  * @return {Array} the path array to the repo base (and not the internal Git dirs)
  */
-function getRepoPath( path ) {
+function getRepoPath( repoPath ) {
     var REPO_DIRS = [ // @see man gitrepository-layout
         // it might be useful to convert this into a self-organizing list
         /\/git-receive-pack$/,
@@ -45,7 +50,7 @@ function getRepoPath( path ) {
         /\/logs$/,
         /\/shallow$/
     ],
-    pathStr = path.join('/'),
+    pathStr = repoPath.join('/'),
     i,
     re;
     for ( i = 0; i < REPO_DIRS.length; i++ ) {
@@ -54,60 +59,104 @@ function getRepoPath( path ) {
             return pathStr.replace( re, '' ).split('/');
         }
     }
-    return path;
+    return repoPath;
 }
 
-util.inherits( ServiceActionChecker, stream.Transform );
-/**
- * Checks a Git pack input stream to determine the most likely action type
- * @param Object options serviceAction is the initial guess, other options are passed to Transform
- * When finished streaming, check this.serviceAction for the gathered service action
- */
-function ServiceActionChecker( options ) {
-    if ( !( this instanceof ServiceActionChecker ) )
-        return new ServiceActionChecker( options );
-
-    this.serviceAction = ( options.serviceAction === 'pull' ? 'clone' : options.serviceAction );
-    delete options.serviceAction;
-
-    stream.Transform.call( this, options );
-}
-
-ServiceActionChecker.prototype._transform = function( chunk, enc, done ) {
-    if ( HAVE_RE.test( chunk.toString() ) && this.serviceAction === 'clone' ) {
-        this.serviceAction = 'pull';
-    }
-    this.push( chunk );
-    done();
-}
-
-module.exports = function( req, res, urlComponents, rpub ) {
+module.exports = function( req, res, urlComponents, EventBus ) {
     var repoPath = getRepoPath( urlComponents.path ),
+        repoPathStr = '/' + repoPath.join('/'),
         repoFullPath = path.resolve
             .bind( null, config.pathToRepos )
             .apply( null, repoPath ),
         actionNotifier = new stream.PassThrough(),
-        serviceActionChecker,
-        packStream;
+        gitBackend,
+        gitService;
 
-    packStream = req.pipe( gitHttpBackend( req.url, function( err, service ) {
-        var ps;
+    function callHandlerSync( repo, action, args, cb ) {
+        var handlerTimeout,
+            doneCB = function() {
+                var args = Array.prototype.slice.call( arguments );
+                clearTimeout( handlerTimeout );
+                cb.apply( null, args );
+            };
 
-        if ( err ) {
-            res.writeHead( 500 );
-            res.end( err );
-            return;
+        if ( EventBus.triggerHandler( repo, action, args.concat( cb ) ) ) {
+            handlerTimeout = setTimeout( doneCB, handlerTimeoutLen );
+        } else {
+            doneCB();
         }
+    }
 
-        res.setHeader( 'Content-Type', service.type );
+    function createBackend( serviceHook ) {
+        return gitHttpBackend( urlComponents.url, function( err, service ) {
+            var ps;
 
-        serviceActionChecker = new ServiceActionChecker({ serviceAction: service.action });
+            if ( err ) {
+                res.writeHead( 500 );
+                res.end();
+                return;
+            }
 
-        ps = spawn( service.cmd, service.args.concat( repoFullPath ) );
-        ps.stdout.pipe( service.createStream() ).pipe( serviceActionChecker ).pipe( ps.stdin );
-    }) ).pipe( actionNotifier ).pipe( res );
+            res.setHeader( 'Content-Type', service.type );
+
+            gitService = service;
+
+            serviceHook( service, function() {
+                ps = spawn( service.cmd, service.args.concat( repoFullPath ) );
+                ps.stdout.pipe( service.createStream() ).pipe( ps.stdin );
+                ps.stderr.on( 'data', function() {
+                    res.writeHead( 500 );
+                    res.end();
+                });
+            });
+        });
+    }
+
+    try {
+        fs.statSync( repoFullPath );
+        gitBackend = createBackend( function( service, done ) {
+            var action = service.action,
+                cbArgs = [ service.fields ];
+            callHandlerSync( repoPathStr, 'pre-' + action, cbArgs, function( responseText ) {
+                var sideband;
+                if ( action === 'info' && responseText ) {
+                    sideband = service.createBand();
+                    sideband.end( responseText );
+                }
+                EventBus.triggerListeners( repoPathStr, 'pre-' + action, [ service.fields ] );
+                done();
+            });
+        });
+        req.pipe( gitBackend ).pipe( actionNotifier ).pipe( res );
+    } catch( e ) {
+        if ( e.code === 'ENOENT' ) {
+            callHandlerSync( repoPathStr, '404', [], function( clonable, responseText ) {
+                clonable = true;
+                if ( clonable ) {
+                    gitBackend = createBackend( function( service, done ) {
+                        var sideband;
+                        if ( service.action === 'info' && responseText ) {
+                            sideband = service.createBand();
+                            sideband.end( responseText );
+                        }
+                        EventBus.triggerListeners( repoPathStr, '404' );
+                        done();
+                    });
+                    req.pipe( gitBackend ).pipe( actionNotifier ).pipe( res );
+                } else {
+                    res.writeHead(404);
+                    res.end();
+                }
+            });
+            return;
+        } else {
+            throw e;
+        }
+    }
 
     actionNotifier.on( 'end', function() {
-        var action = serviceActionChecker.serviceAction;
+        callHandlerSync( repoPathStr, gitService.action, [ gitService.fields ], function() {
+            EventBus.triggerListeners( repoPathStr, gitService.action, [ gitService.fields ] );
+        });
     });
 };
