@@ -29,9 +29,16 @@ var zlib = require('zlib'),
     shoe = require('shoe');
 
 function GitAngler( opts ) {
+    var TRAILING_SLASH = /\/$/;
     if ( !(this instanceof GitAngler) ) { return new GitAngler( opts ); }
 
     this.opts = opts;
+    this.opts.pathToRepos = opts.pathToRepos.replace( TRAILING_SLASH, '' );
+
+    this.opts.gitHTTPMount = opts.gitHTTPMount ?
+        opts.gitHTTPMount.replace( TRAILING_SLASH, '' ) : '/repos';
+    this.opts.hookEndpoint = opts.hookEndpoint ?
+        opts.hookEndpoint.replace( TRAILING_SLASH, '' ) : '/hooks';
 }
 
 GitAngler.prototype = {
@@ -60,8 +67,8 @@ GitAngler.prototype = {
 
         angler.use( compression() );
 
-        angler.use( this.opts.gitHTTPMount || '/repos', backend );
-        angler.use( this.opts.hookEndpoint || '/hooks', hookEndpoint );
+        angler.use( this.opts.gitHTTPMount, backend );
+        angler.use( this.opts.hookEndpoint, hookEndpoint );
 
         server = angler.listen( this.opts.port );
 
