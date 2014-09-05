@@ -13,12 +13,12 @@ module.exports = {
 
         test.expect( 3 );
 
-        this.bus.setEventHandler( 'scope', 'event', function() {
+        this.bus.setHandler( 'scope', 'event', function() {
             test.deepEqual( Array.prototype.slice.call( arguments ), expected );
         });
 
-        this.bus.setEventHandler( 'other_scope', '*', function() {});
-        this.bus.setEventHandler( 'other_scope', 'event', function() {});
+        this.bus.setHandler( 'other_scope', '*', function() {});
+        this.bus.setHandler( 'other_scope', 'event', function() {});
 
         triggered = this.bus.triggerHandler( 'scope', 'event', testArgs );
         test.ok( triggered );
@@ -35,15 +35,15 @@ module.exports = {
         var invocations = 0;
         test.expect( 2 );
 
-        this.bus.setEventHandler( 'scope', '*', function() {
+        this.bus.setHandler( 'scope', '*', function() {
             var expected = ( invocations === 0 ? [ 'scope', 'event1' ] : [ 'scope', 'event2' ] )
                             .concat( testArgs );
             invocations++;
             test.deepEqual( Array.prototype.slice.call( arguments ), expected );
         });
 
-        this.bus.setEventHandler( 'other_scope', 'event1', function() {});
-        this.bus.setEventHandler( 'other_scope', '*', function() {});
+        this.bus.setHandler( 'other_scope', 'event1', function() {});
+        this.bus.setHandler( 'other_scope', '*', function() {});
 
         this.bus.triggerHandler( 'scope', 'event1', testArgs );
         this.bus.triggerHandler( 'scope', 'event2', testArgs );
@@ -56,20 +56,20 @@ module.exports = {
 
         test.expect( 2 );
 
-        this.bus.setEventHandler( '*', 'event', function() {
+        this.bus.setHandler( '*', 'event', function() {
             var expected = ( invocations === 0 ? [ 'scope1', 'event' ] : [ 'scope2', 'event' ] )
                             .concat( testArgs );
             invocations++;
             test.deepEqual( Array.prototype.slice.call( arguments ), expected );
         });
 
-        this.bus.setEventHandler( '*', 'other_event', function() {});
-        this.bus.setEventHandler( 'scope1', '*', function() {});
-        this.bus.setEventHandler( 'scope2', '*', function() {});
-        this.bus.setEventHandler( 'scope1', 'event', function() {});
-        this.bus.setEventHandler( 'scope2', 'event', function() {});
-        this.bus.setEventHandler( 'scope1', 'other_event', function() {});
-        this.bus.setEventHandler( 'scope2', 'other_event', function() {});
+        this.bus.setHandler( '*', 'other_event', function() {});
+        this.bus.setHandler( 'scope1', '*', function() {});
+        this.bus.setHandler( 'scope2', '*', function() {});
+        this.bus.setHandler( 'scope1', 'event', function() {});
+        this.bus.setHandler( 'scope2', 'event', function() {});
+        this.bus.setHandler( 'scope1', 'other_event', function() {});
+        this.bus.setHandler( 'scope2', 'other_event', function() {});
 
         this.bus.triggerHandler( 'scope1', 'event', testArgs );
         this.bus.triggerHandler( 'scope2', 'event', testArgs );
@@ -80,18 +80,18 @@ module.exports = {
     testHandlerGlobalAllEvents: function( test ) {
         test.expect( 4 );
 
-        this.bus.setEventHandler( '*', '*', function() {
+        this.bus.setHandler( '*', '*', function() {
             test.ok( true );
         });
 
-        this.bus.setEventHandler( '*', 'event', function() {});
-        this.bus.setEventHandler( '*', 'other_event', function() {});
-        this.bus.setEventHandler( 'scope1', '*', function() {});
-        this.bus.setEventHandler( 'scope2', '*', function() {});
-        this.bus.setEventHandler( 'scope1', 'event', function() {});
-        this.bus.setEventHandler( 'scope2', 'event', function() {});
-        this.bus.setEventHandler( 'scope1', 'other_event', function() {});
-        this.bus.setEventHandler( 'scope2', 'other_event', function() {});
+        this.bus.setHandler( '*', 'event', function() {});
+        this.bus.setHandler( '*', 'other_event', function() {});
+        this.bus.setHandler( 'scope1', '*', function() {});
+        this.bus.setHandler( 'scope2', '*', function() {});
+        this.bus.setHandler( 'scope1', 'event', function() {});
+        this.bus.setHandler( 'scope2', 'event', function() {});
+        this.bus.setHandler( 'scope1', 'other_event', function() {});
+        this.bus.setHandler( 'scope2', 'other_event', function() {});
 
         this.bus.triggerHandler( 'scope1', 'event', testArgs );
         this.bus.triggerHandler( 'scope2', 'event', testArgs );
@@ -104,8 +104,8 @@ module.exports = {
         var f = function() { test.ok( true ); },
             oldHandler;
         test.expect( 1 );
-        this.bus.setEventHandler( '*', '*', f );
-        oldHandler = this.bus.setEventHandler( '*', '*', null );
+        this.bus.setHandler( '*', '*', f );
+        oldHandler = this.bus.setHandler( '*', '*', null );
         if ( oldHandler.call ) { oldHandler(); }
         test.done();
     },
@@ -117,17 +117,17 @@ module.exports = {
 
         test.expect( 4 );
 
-        this.bus.addEventListener( 'scope', 'event', function() {
+        this.bus.addListener( 'l1', 'scope', 'event', function() {
             test.deepEqual( Array.prototype.slice.call( arguments ), expected );
         });
-        this.bus.addEventListener( 'scope', 'event', function() {
+        this.bus.addListener( 'l2', 'scope', 'event', function() {
             test.deepEqual( Array.prototype.slice.call( arguments ), expected );
         });
 
-        this.bus.addEventListener( 'other_scope', 'event', function() {
+        this.bus.addListener( 'l3', 'other_scope', 'event', function() {
             test.ok( false );
         });
-        this.bus.addEventListener( 'other_scope', '*', function() {
+        this.bus.addListener( 'l4', 'other_scope', '*', function() {
             test.ok( false );
         });
 
@@ -149,23 +149,23 @@ module.exports = {
 
         test.expect( 6 );
 
-        this.bus.addEventListener( 'scope', '*', function() {
+        this.bus.addListener( 'l1', 'scope', '*', function() {
             test.deepEqual( Array.prototype.slice.call( arguments ), getExpected() );
         });
-        this.bus.addEventListener( 'scope', '*', function() {
+        this.bus.addListener( 'l2', 'scope', '*', function() {
             test.deepEqual( Array.prototype.slice.call( arguments ), getExpected() );
         });
-        this.bus.addEventListener( 'scope', 'event', function() {
+        this.bus.addListener( 'l3', 'scope', 'event', function() {
             test.deepEqual( Array.prototype.slice.call( arguments ), getExpected() );
         });
-        this.bus.addEventListener( 'scope', 'event', function() {
+        this.bus.addListener( 'l4', 'scope', 'event', function() {
             test.deepEqual( Array.prototype.slice.call( arguments ), getExpected() );
         });
 
-        this.bus.addEventListener( 'other_scope', '*', function() {
+        this.bus.addListener( 'l5', 'other_scope', '*', function() {
             test.ok( false );
         });
-        this.bus.addEventListener( 'other_scope', 'event', function() {
+        this.bus.addListener( 'l6', 'other_scope', 'event', function() {
             test.ok( false );
         });
 
@@ -178,23 +178,23 @@ module.exports = {
     testListenerGlobalSingleEvent: function( test ) {
         test.expect( 6 );
 
-        this.bus.addEventListener( '*', 'event', function() {
+        this.bus.addListener( 'l1', '*', 'event', function() {
             test.ok( true );
         });
-        this.bus.addEventListener( '*', 'event', function() {
+        this.bus.addListener( 'l2', '*', 'event', function() {
             test.ok( true );
         });
-        this.bus.addEventListener( 'scope', 'event', function() {
+        this.bus.addListener( 'l3', 'scope', 'event', function() {
             test.ok( true );
         });
-        this.bus.addEventListener( 'scope', 'event', function() {
+        this.bus.addListener( 'l4', 'scope', 'event', function() {
             test.ok( true );
         });
 
-        this.bus.addEventListener( 'other_scope', 'other_event', function() {
+        this.bus.addListener( 'l5', 'other_scope', 'other_event', function() {
             test.ok( false );
         });
-        this.bus.addEventListener( 'other_scope', 'other_event', function() {
+        this.bus.addListener( 'l6', 'other_scope', 'other_event', function() {
             test.ok( false );
         });
 
@@ -208,22 +208,22 @@ module.exports = {
 
         test.expect( 20 );
 
-        this.bus.addEventListener( '*', '*', pass );
-        this.bus.addEventListener( '*', '*', pass );
+        this.bus.addListener( 'l1', '*', '*', pass );
+        this.bus.addListener( 'l2', '*', '*', pass );
 
-        this.bus.addEventListener( '*', 'event', pass );
-        this.bus.addEventListener( '*', 'other_event', pass );
+        this.bus.addListener( 'l3', '*', 'event', pass );
+        this.bus.addListener( 'l4', '*', 'other_event', pass );
 
-        this.bus.addEventListener( 'scope', '*', pass );
-        this.bus.addEventListener( 'other_scope', '*', pass );
+        this.bus.addListener( 'l5', 'scope', '*', pass );
+        this.bus.addListener( 'l6', 'other_scope', '*', pass );
 
-        this.bus.addEventListener( 'scope', 'event', pass );
-        this.bus.addEventListener( 'scope', 'other_event', pass );
+        this.bus.addListener( 'l7', 'scope', 'event', pass );
+        this.bus.addListener( 'l8', 'scope', 'other_event', pass );
 
-        this.bus.addEventListener( 'other_scope', 'event', pass );
-        this.bus.addEventListener( 'other_scope', 'other_event', pass );
+        this.bus.addListener( 'l9', 'other_scope', 'event', pass );
+        this.bus.addListener( 'l10', 'other_scope', 'other_event', pass );
 
-        this.bus.addEventListener( 'untriggered', 'untriggered', function() {
+        this.bus.addListener( 'l11', 'untriggered', 'untriggered', function() {
             test.ok( false );
         });
 
@@ -242,16 +242,16 @@ module.exports = {
 
         test.expect( 4 );
 
-        this.bus.addEventListener( 'scope', 'event', fail );
-        this.bus.addEventListener( 'scope', 'event', pass );
+        this.bus.addListener( 'bad', 'scope', 'event', fail );
+        this.bus.addListener( 'good', 'scope', 'event', pass );
 
-        removed = this.bus.removeEventListener( 'scope', 'event', fail );
+        removed = this.bus.removeListener( 'bad', 'scope', 'event' );
         test.ok( removed );
 
-        removed = this.bus.removeEventListener( 'other_scope', 'event', fail );
+        removed = this.bus.removeListener( 'good', 'other_scope', 'event' );
         test.ok( !removed );
 
-        removed = this.bus.removeEventListener( 'scope', 'other_event', fail );
+        removed = this.bus.removeListener( 'good', 'scope', 'other_event', fail );
         test.ok( !removed );
 
         this.bus.triggerListeners( 'scope', 'event' );
@@ -264,8 +264,8 @@ module.exports = {
 
         test.expect( 2 );
 
-        this.bus.setEventHandler( 'scope', 'event', okay );
-        this.bus.addEventListener( 'scope', 'event', okay );
+        this.bus.setHandler( 'scope', 'event', okay );
+        this.bus.addListener( 'l1', 'scope', 'event', okay );
 
         this.bus.trigger( 'scope', 'event' );
 

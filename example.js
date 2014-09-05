@@ -47,9 +47,9 @@ GitAngler.prototype = {
             backend,
             hookEndpoint,
             eventBusRPCs = {
-                addEventListener: eventBus.addEventListener.bind( eventBus ),
-                setEventHandler: eventBus.setEventHandler.bind( eventBus ),
-                removeEventListener: eventBus.removeEventListener.bind( eventBus )
+                addListener: eventBus.addListener.bind( eventBus ),
+                setHandler: eventBus.setHandler.bind( eventBus ),
+                removeListener: eventBus.removeListener.bind( eventBus )
             };
 
         this.opts.eventBus = eventBus;
