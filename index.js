@@ -18,77 +18,12 @@
 
 'use strict';
 
-var zlib = require('zlib'),
-    net = require('net'),
-    connect = require('connect'),
-    compression = require('compression'),
-    dnode = require('dnode'),
-    gitBackend = require('./lib/git_http_backend'),
+var gitBackend = require('./lib/git_http_backend'),
     githookEndpoint = require('./lib/githook_endpoint'),
-    EventBus = require('./lib/EventBus'),
-    shoe = require('shoe');
+    EventBus = require('./lib/EventBus');
 
-function GitAngler( opts ) {
-    var TRAILING_SLASH = /\/$/;
-    if ( !(this instanceof GitAngler) ) { return new GitAngler( opts ); }
-
-    this.opts = opts;
-    this.opts.pathToRepos = opts.pathToRepos.replace( TRAILING_SLASH, '' );
-
-    this.opts.gitHTTPMount = opts.gitHTTPMount ?
-        opts.gitHTTPMount.replace( TRAILING_SLASH, '' ) : '/repos';
-    this.opts.hookEndpoint = opts.hookEndpoint ?
-        opts.hookEndpoint.replace( TRAILING_SLASH, '' ) : '/hooks';
-}
-
-GitAngler.prototype = {
+module.exports = {
     gitHttpBackend: gitBackend,
     githookEndpoint: githookEndpoint,
     EventBus: EventBus,
-
-    start: function() {
-        var angler = connect(),
-            server,
-            eventsServer,
-            wsEventsEndpoint,
-            eventBus = new EventBus(),
-            backend,
-            hookEndpoint,
-            eventBusRPCs = {
-                addEventListener: eventBus.addEventListener.bind( eventBus ),
-                setEventHandler: eventBus.setEventHandler.bind( eventBus ),
-                removeEventListener: eventBus.removeEventListener.bind( eventBus )
-            };
-
-        this.opts.eventBus = eventBus;
-
-        backend = gitBackend( this.opts );
-        hookEndpoint = githookEndpoint( this.opts );
-
-        angler.use( compression() );
-
-        angler.use( this.opts.gitHTTPMount, backend );
-        angler.use( this.opts.hookEndpoint, hookEndpoint );
-
-        server = angler.listen( this.opts.port );
-
-        wsEventsEndpoint = shoe( function( stream ) {
-            var d = dnode( eventBusRPCs );
-            d.pipe( stream ).pipe( d );
-        }).install( server, this.opts.eventsMountPoint || '/events' );
-
-        eventsServer = net.createServer( function( socket ) {
-            var d = dnode( eventBusRPCs );
-            socket.pipe( d ).pipe( socket );
-        }).listen( this.opts.eventsPort );
-
-        return {
-            eventBus: eventBus,
-            server: server,
-            eventsServer: eventsServer,
-            wsEventsEndpoint: wsEventsEndpoint
-        };
-    }
 };
-
-module.exports = GitAngler;
