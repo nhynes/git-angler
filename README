@@ -15,17 +15,13 @@ Used to capture the following events:
     * (pre-)pull
     * (pre-)info
     * (pre-)clone
-    * (pre-)push // not entirely sure why this is useful over (pre-)receive
+    * (pre-)push
 
 ## REST hook listener
 
-Events sent from local (client) repo:
-    * post-merge
+Events sent from local (client) repo with hooks installed:
+    * merge
     * pre-rebase
     * (pre|post)-commit
     * post-checkout
-    * post-rewrite -- not a high priority for implementation, but very possible
-    * (pre|post)-patch -- same as above
-
-Events sent from the remote repo:
-    * (pre-)push -- corresponds to (pre|post)-receive
+    * (pre-)receive
