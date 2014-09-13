@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Captures git events and casts them out as hooks",
   "main": "index.js",
-  "license": "AGPL-3.0",
+  "license": "MIT",
   "repository": {
       "type": "git",
       "url": "https://github.com/nhynes/git-angler.git"
