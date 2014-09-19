@@ -15,8 +15,6 @@ done < /dev/stdin
 
 res="$(curl -s --data "$updates" "$anglerUrl?hook=receive&repo=$repo")"
 
-echo "$res"
-
 IFS=$'\n' respArgs=($res)
 
 exitcode=${respArgs[0]}
