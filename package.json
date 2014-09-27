@@ -1,7 +1,7 @@
 {
   "name": "git-angler",
-  "version": "1.0.0",
-  "description": "Captures git events and casts them out as hooks",
+  "version": "1.0.1",
+  "description": "Captures Git events and casts them out as hooks",
   "main": "index.js",
   "license": "MIT",
   "repository": {
